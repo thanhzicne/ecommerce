@@ -31,7 +31,7 @@ jobs:
     - name: Build frontend
       run: |
         cd frontend
-        npm ci
+        npm install
         npm run build
       env:
         VITE_API_URL: http://${{ secrets.EC2_HOST }}:8080/api
