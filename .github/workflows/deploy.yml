@@ -1,0 +1,88 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Build backend with Maven
+      run: |
+        cd backend
+        chmod +x mvnw
+        ./mvnw clean package -DskipTests
+
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm ci
+        npm run build
+      env:
+        VITE_API_URL: http://${{ secrets.EC2_HOST }}:8080/api
+
+    - name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_TOKEN }}
+
+    - name: Build and push backend image
+      run: |
+        docker build -t ${{ secrets.DOCKER_USERNAME }}/ecommerce-backend:latest ./backend
+        docker push ${{ secrets.DOCKER_USERNAME }}/ecommerce-backend:latest
+
+    - name: Build and push frontend image
+      run: |
+        docker build \
+          --build-arg VITE_API_URL=http://${{ secrets.EC2_HOST }}:8080/api \
+          -t ${{ secrets.DOCKER_USERNAME }}/ecommerce-frontend:latest \
+          ./frontend
+        docker push ${{ secrets.DOCKER_USERNAME }}/ecommerce-frontend:latest
+
+    - name: Deploy to EC2
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          docker pull ${{ secrets.DOCKER_USERNAME }}/ecommerce-backend:latest
+          docker pull ${{ secrets.DOCKER_USERNAME }}/ecommerce-frontend:latest
+
+          docker stop backend frontend || true
+          docker rm backend frontend || true
+
+          docker run -d \
+            --name backend \
+            -p 8080:8080 \
+            -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+            --restart unless-stopped \
+            ${{ secrets.DOCKER_USERNAME }}/ecommerce-backend:latest
+
+          docker run -d \
+            --name frontend \
+            -p 3000:80 \
+            --restart unless-stopped \
+            ${{ secrets.DOCKER_USERNAME }}/ecommerce-frontend:latest
+
+          docker image prune -f
+          echo "Deploy successful!"
