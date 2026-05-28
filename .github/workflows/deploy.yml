@@ -26,8 +26,7 @@ jobs:
     - name: Build backend with Maven
       run: |
         cd backend
-        chmod +x mvnw
-        ./mvnw clean package -DskipTests
+        mvn clean package -DskipTests
 
     - name: Build frontend
       run: |
