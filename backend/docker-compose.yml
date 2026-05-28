@@ -1,0 +1,18 @@
+version: '3.8'
+
+services:
+
+  backend:
+    image: ecommerce-backend:latest
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_PASSWORD=${DB_PASSWORD}
+    restart: on-failure
+
+  frontend:
+    image: ecommerce-frontend:latest
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
