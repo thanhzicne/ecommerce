@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { getProducts, deleteProduct } from '../services/productService';
 import ProductForm from '../components/ProductForm';
+import { resolveImageUrl } from '../utils/imageUrl';
 
 const TABLE_HEADERS = ['ID', 'Ảnh', 'Tên sản phẩm', 'Giá', 'Tồn kho', 'Hành động'];
 
@@ -113,7 +114,7 @@ export default function AdminPage() {
                 <td className="admin-table__id">#{product.id}</td>
                 <td>
                   {product.imageUrl ? (
-                    <img className="admin-table__image" src={product.imageUrl} alt={product.name} />
+                    <img className="admin-table__image" src={resolveImageUrl(product.imageUrl)} alt={product.name} />
                   ) : (
                     <div className="admin-table__image-placeholder">📦</div>
                   )}

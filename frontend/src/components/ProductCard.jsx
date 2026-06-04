@@ -1,10 +1,14 @@
+import { resolveImageUrl } from '../utils/imageUrl';
+
 export default function ProductCard({ product }) {
+  const imageUrl = resolveImageUrl(product.imageUrl);
+
   return (
     <article className="product-card">
-      {product.imageUrl ? (
+      {imageUrl ? (
         <img
           className="product-card__image"
-          src={product.imageUrl}
+          src={imageUrl}
           alt={product.name}
         />
       ) : (
